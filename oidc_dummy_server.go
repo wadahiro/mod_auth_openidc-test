@@ -134,6 +134,7 @@ func token(w http.ResponseWriter, r *http.Request) {
 
 	mu.Lock()
 	nonce := session[code]
+	delete(session, "nonce")
 	mu.Unlock()
 
 	now := time.Now()
@@ -157,7 +158,7 @@ func token(w http.ResponseWriter, r *http.Request) {
 	jwt := base64URLEncode(bh) + "." + base64URLEncode(bp) + "."
 
 	t := Token{
-		AccessToken:  "dummyaccesstoken",
+		AccessToken:  newRandom(1512),
 		TokenType:    "Bearer",
 		RefreshToken: "dummyrefreshtoken",
 		IDToken:      jwt,
@@ -223,4 +224,11 @@ func newUUID() (string, error) {
 	// version 4 (pseudo-random); see section 4.1.3
 	uuid[6] = uuid[6]&^0xf0 | 0x40
 	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:]), nil
+}
+
+func newRandom(size int64) string {
+	b := make([]byte, size)
+	rand.Read(b)
+
+	return base64.URLEncoding.EncodeToString(b)
 }
