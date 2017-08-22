@@ -2,5 +2,5 @@
 
 oidc_dummy_server &
 
-httpd -DFOREGROUND
+valgrind -v --leak-check=yes --show-reachable=yes --error-limit=no --log-file="/var/log/valgrind.log" --tool=memcheck /usr/local/apache2/bin/httpd -X -DFOREGROUND
 
