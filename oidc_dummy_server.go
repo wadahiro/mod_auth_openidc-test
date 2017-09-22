@@ -17,15 +17,15 @@ import (
 	"time"
 )
 
-const (
-	issuer   = "http://localhost:8080"
-	base_url = "http://localhost:8080"
-)
-
 var (
+	serverURL = flag.String(
+		"server_url",
+		"http://localhost:8080",
+		"OIDC Server URL",
+	)
 	redirectURL = flag.String(
 		"redirect_url",
-		"http://localhost:80/callback",
+		"http://localhost/callback",
 		"Redirect URL of the OIDC/OAuth2 client",
 	)
 )
@@ -94,12 +94,12 @@ func metadata(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Start /.well-known/openid-configuration")
 
 	t := Metadata{
-		Issuer:                            issuer,
-		AuthorizationEndpoint:             base_url + "/auth",
-		TokenEndpoint:                     base_url + "/token",
-		UserinfoEndpoint:                  base_url + "/userinfo",
-		EndSessionEndpoint:                base_url + "/logout",
-		JwksURI:                           base_url + "/certs",
+		Issuer:                            *serverURL,
+		AuthorizationEndpoint:             *serverURL + "/auth",
+		TokenEndpoint:                     *serverURL + "/token",
+		UserinfoEndpoint:                  *serverURL + "/userinfo",
+		EndSessionEndpoint:                *serverURL + "/logout",
+		JwksURI:                           *serverURL + "/certs",
 		GrantTypesSupported:               []string{"authorization_code"},
 		ResponseTypesSupported:            []string{"code", "id_token", "code id_token"},
 		IDTokenSigningAlgValuesSupported:  []string{"none"},
@@ -144,7 +144,7 @@ func token(w http.ResponseWriter, r *http.Request) {
 		Alg: "none",
 	}
 	p := JWTPayload{
-		Iss:   "http://localhost:8080",
+		Iss:   *serverURL,
 		Sub:   "dummysub",
 		Aud:   "test",
 		Exp:   secs + 1000,
