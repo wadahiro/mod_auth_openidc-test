@@ -12,6 +12,16 @@ ENV HTTPD_VERSION=2.4.6-45.el7.centos \
     HIREDIS_VERSION=0.12.1-1.el7.x86_64 \
     CJOSE_VERSION=0.5.1-1.el7.centos.x86_64
 
+## Fix centos version
+RUN \
+  echo 7.3.1611 > /etc/yum/vars/releasever \
+  && sed -i -e "s/^mirrorlist=/#mirrorlist=/g" /etc/yum.repos.d/CentOS-Base.repo \
+  && sed -i -e "s/^#baseurl=/baseurl=/g" /etc/yum.repos.d/CentOS-Base.repo \
+  && sed -i -e "s/^mirrorlist=/#mirrorlist=/g" /etc/yum.repos.d/CentOS-fasttrack.repo \
+  && sed -i -e "s/^#baseurl=/baseurl=/g" /etc/yum.repos.d/CentOS-fasttrack.repo
+
+
+## Install debug modules
 RUN set -x \
   && yum install -y gcc make bzip2 perl
 
@@ -39,7 +49,7 @@ RUN \
     && mv apr-util-* httpd-2.4.27/srclib/apr-util \
     && mv apr-* httpd-2.4.27/srclib/apr \
     && cd httpd-* \
-    && CFLAGS="-g" ./configure --enable-mpms-shared=all --with-included-apr --enable-pool-debug=all --enable-threads \
+    && CFLAGS="-g" ./configure --enable-mpms-shared=all --with-included-apr --enable-threads \
     && make \
     && make install
 
@@ -68,16 +78,40 @@ RUN \
   && make install
 
 
+## Install distributed modules
+RUN \
+  yum install -y httpd-${HTTPD_VERSION}
 
+RUN \
+  cd /tmp \
+  && curl -L -O https://dl.fedoraproject.org/pub/epel/7/x86_64/h/hiredis-${HIREDIS_VERSION}.rpm \
+  && curl -L -O https://github.com/pingidentity/mod_auth_openidc/releases/download/v2.3.0/cjose-${CJOSE_VERSION}.rpm \
+  && curl -L -O https://github.com/pingidentity/mod_auth_openidc/releases/download/v${MOD_AUTH_OPENIDC_SHORT_VERSION}/mod_auth_openidc-${MOD_AUTH_OPENIDC_VERSION}.rpm \
+  && yum install -y *.rpm \
+  && rm -rf /tmp/*.rpm
+
+
+## Install dummmy oidc server & apps
 COPY --from=0 /go/src/github.com/wadahiro/mod_auth_openidc-test/oidc_dummy_server /usr/local/bin/
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/*
 
-RUN ln -sf /dev/stdout /usr/local/apache2/logs/access_log && ln -sf /dev/stderr /usr/local/apache2/logs/error_log
+## Configure httpd
+RUN \
+  ln -sf /dev/stdout /usr/local/apache2/logs/access_log \
+  && ln -sf /dev/stderr /usr/local/apache2/logs/error_log \
+  && ln -sf /dev/stdout /var/log/httpd/access_log \
+  && ln -sf /dev/stderr /var/log/httpd/error_log \
+  && ln -sf /dev/stdout /var/log/valgrind.log
 
 RUN echo "Include conf.d/*.conf" >> /usr/local/apache2/conf/httpd.conf
 
 COPY server.conf /usr/local/apache2/conf.d/
+COPY server.conf /etc/httpd/conf.d/
+
+RUN sed -i -e "s/^LoadModule mpm_event_module/#LoadModule mpm_event_module/" /usr/local/apache2/conf/httpd.conf
+COPY 00-mpm.conf /usr/local/apache2/conf.d/
+COPY 00-mpm.conf /etc/httpd/conf.modules.d/
 
 EXPOSE 80
 EXPOSE 8080
