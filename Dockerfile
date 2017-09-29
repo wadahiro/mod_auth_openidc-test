@@ -1,6 +1,8 @@
-FROM golang:1.8.3-alpine
+FROM golang:1.8.3
 WORKDIR /go/src/github.com/wadahiro/mod_auth_openidc-test/
-COPY . .
+COPY *.go .
+RUN go get github.com/dgrijalva/jwt-go 
+RUN go get github.com/pkg/errors
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo oidc_dummy_server.go
 
 FROM centos:7.3.1611
