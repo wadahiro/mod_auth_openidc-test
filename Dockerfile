@@ -1,6 +1,6 @@
 FROM golang:1.8.3-alpine
 WORKDIR /go/src/github.com/wadahiro/mod_auth_openidc-test/
-COPY oidc_dummy_server.go .
+COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo oidc_dummy_server.go
 
 FROM centos:7.3.1611
