@@ -92,6 +92,7 @@ RUN \
   && yum install -y *.rpm \
   && rm -rf /tmp/*.rpm
 
+RUN yum install -y mod_ssl
 
 ## Install dummmy oidc server & apps
 COPY --from=0 /go/src/github.com/wadahiro/mod_auth_openidc-test/oidc_dummy_server /usr/local/bin/
@@ -114,6 +115,13 @@ COPY server.conf /etc/httpd/conf.d/
 RUN sed -i -e "s/^LoadModule mpm_event_module/#LoadModule mpm_event_module/" /usr/local/apache2/conf/httpd.conf
 COPY 00-mpm.conf /usr/local/apache2/conf.d/
 COPY 00-mpm.conf /etc/httpd/conf.modules.d/
+
+COPY myself.crt /etc/pki/tls/certs/
+COPY myself.key /etc/pki/tls/private/
+COPY myself.csr /etc/pki/tls/private/
+
+COPY myself.crt /etc/pki/ca-trust/source/anchors/myself.crt
+RUN  update-ca-trust
 
 EXPOSE 80
 EXPOSE 8080
